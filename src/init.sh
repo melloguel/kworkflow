@@ -19,6 +19,13 @@ function init_kw()
 {
   local config_file_template="$KW_ETC_DIR/kworkflow_template.config"
   local name='kworkflow.config'
+  local cmd=''
+  local distro=''
+  local has_ssh=0
+  local installed
+  local ssh_keys
+  local key_name ssh_dir
+  local ssh_user ssh_ip
 
   if [[ "$1" =~ -h|--help ]]; then
     init_help "$1"
@@ -46,7 +53,6 @@ function init_kw()
     #TODO: Help to setup kworkflow.config;
 
     #TODO: Check for required;
-
   fi
 
   if [[ -f "$PWD/$KW_DIR/$name" ]]; then
