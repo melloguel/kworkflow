@@ -4,6 +4,7 @@
 include "$KW_LIB_DIR/kwio.sh"
 include "$KW_LIB_DIR/kwlib.sh"
 include "$KW_LIB_DIR/remote.sh"
+include "$KW_LIB_DIR/interactive.sh"
 
 KW_DIR='.kw'
 
@@ -35,6 +36,17 @@ function init_kw()
   if [[ "$?" -gt 0 ]]; then
     complain "${options_values['ERROR']}"
     return 22 # EINVAL
+  fi
+
+  if [[ "${options_values['INTERACTIVE']}" ]]; then
+    interactive_init
+
+    #TODO: Help to setup git;
+
+    #TODO: Help to setup kworkflow.config;
+
+    #TODO: Check for required;
+
   fi
 
   if [[ -f "$PWD/$KW_DIR/$name" ]]; then
@@ -112,8 +124,8 @@ function set_config_value()
 
 function parse_init_options()
 {
-  local long_options='arch:,remote:,target:,force'
-  local short_options='a:,r:,t:,f'
+  local long_options='arch:,remote:,target:,force,interactive'
+  local short_options='a:,r:,t:,f,i'
 
   options="$(kw_parse "$short_options" "$long_options" "$@")"
 
@@ -147,6 +159,10 @@ function parse_init_options()
         shift
         options_values['FORCE']=1
         ;;
+      --interactive | -i)
+        options_values['INTERACTIVE']=1
+        shift
+        ;;
       --)
         shift
         ;;
@@ -170,5 +186,6 @@ function init_help()
     '  init - Creates a kworkflow.config file in the current directory.' \
     '  init --arch <arch> - Set the arch field in the kworkflow.config file.' \
     '  init --remote <user>@<ip>:<port> - Set remote fields in the kworkflow.config file.' \
-    '  init --target <target> Set the default_deploy_target field in the kworkflow.config file'
+    '  init --target <target> Set the default_deploy_target field in the kworkflow.config file' \
+    '  init --interactive - Perform first time setup in an interactive manner. Recommended for new users.'
 }
