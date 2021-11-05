@@ -173,4 +173,89 @@ function test_ask_with_default()
   assert_equals_helper "$assert_equals_message" "$LINENO" "$desired_output" "$output"
 }
 
+function test_ask_yN()
+{
+  local count=0
+  local assert_equals_message=''
+
+  assert_equals_message='Default answer: no, user answer: y'
+  output=$(printf '%s\n' 'y' | ask_yN 'Test message')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '1' "$output"
+
+  assert_equals_message='Default answer: no, user answer: Y'
+  output=$(printf '%s\n' 'Y' | ask_yN 'Test message')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '1' "$output"
+
+  assert_equals_message='Default answer: no, user answer: Yes'
+  output=$(printf '%s\n' 'Yes' | ask_yN 'Test message')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '1' "$output"
+
+  assert_equals_message='Default answer: no, user answer: invalid (sim)'
+  output=$(printf '%s\n' 'Sim' | ask_yN 'Test message')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '0' "$output"
+
+  assert_equals_message='Default answer: no, user answer: No'
+  output=$(printf '%s\n' 'No' | ask_yN 'Test message')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '0' "$output"
+
+  assert_equals_message='Default answer: no, user answer: N'
+  output=$(printf '%s\n' 'N' | ask_yN 'Test message')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '0' "$output"
+
+  # Tests with default option selected
+  assert_equals_message='Default answer: N, user answer: y'
+  output=$(printf '%s\n' 'y' | ask_yN 'Test message' 'N')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '1' "$output"
+
+  assert_equals_message='Default answer: y, user answer: Y'
+  output=$(printf '%s\n' 'Y' | ask_yN 'Test message' 'y')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '1' "$output"
+
+  assert_equals_message='Default answer: y, user answer: default'
+  output=$(printf '%s\n' '' | ask_yN 'Test message' 'y')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '1' "$output"
+
+  assert_equals_message='Default answer: Y, user answer: n'
+  output=$(printf '%s\n' 'n' | ask_yN 'Test message' 'Y')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '0' "$output"
+
+  assert_equals_message='Default answer: n, user answer: N'
+  output=$(printf '%s\n' 'N' | ask_yN 'Test message' 'n')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '0' "$output"
+
+  assert_equals_message='Default answer: n, user anser: default'
+  output=$(printf '%s\n' '' | ask_yN 'Test message' 'n')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '0' "$output"
+
+  # Invalid default
+  assert_equals_message='Default answer: invalid (lala), user answer: default'
+  output=$(printf '%s\n' '' | ask_yN 'Test message' 'lala')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '0' "$output"
+
+  assert_equals_message='Default answer: invalid (lala), user answer: n'
+  output=$(printf '%s\n' 'n' | ask_yN 'Test message' 'lala')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '0' "$output"
+
+  assert_equals_message='Default answer: invalid (lala), user answer: y'
+  output=$(printf '%s\n' 'y' | ask_yN 'Test message' 'lala')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '1' "$output"
+
+  assert_equals_message='Default answer: invalid (lalaYes), user answer: default (no)'
+  output=$(printf '%s\n' '' | ask_yN 'Test message' 'lalaYes')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '0' "$output"
+
+  assert_equals_message='Default answer: invalid (lalaNo), user answer: default (no)'
+  output=$(printf '%s\n' '' | ask_yN 'Test message' 'lalaNo')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '0' "$output"
+
+  # Invalid answer
+  assert_equals_message='Default answer: invalid (lala), user answer: no (invalid: lalaYes)'
+  output=$(printf '%s\n' 'lalaYes' | ask_yN 'Test message' 'lala')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '0' "$output"
+
+  assert_equals_message='Default answer: invalid (lala), user answer: no (invalid: lalano)'
+  output=$(printf '%s\n' 'lalano' | ask_yN 'Test message' 'lala')
+  assert_equals_helper "$assert_equals_message" "$LINENO" '0' "$output"
+}
+
 invoke_shunit
