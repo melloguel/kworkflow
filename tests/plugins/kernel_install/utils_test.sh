@@ -38,9 +38,6 @@ function tearDown()
 
 function test_cmd_manager()
 {
-  local count=0
-  local current_path="$PWD"
-
   output=$(cmd_manager 'TEST_MODE' 'ls something')
   assert_equals_helper 'TEST_MODE' "$LINENO" 'ls something' "$output"
 }
