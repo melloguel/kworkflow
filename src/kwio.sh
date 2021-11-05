@@ -198,4 +198,41 @@ function load_module_text()
   fi
 
   return "$error"
+# Asks for user input
+#
+# @message A string with the message to be displayed to the user.
+# @default_option A string with the default answer to be used if no input is given
+# @show_default A boolean value that defines if the default value will be printed
+#               to the user. If this value is empty, this will be considered true.
+#
+# Return:
+# The user answer, guaranteed not to be empty.
+# Note: this function does not verify the given answer. You have to handle this
+# somewhere else.
+function ask_with_default()
+{
+  local message="$1"
+  local default_option="$2"
+  local show_default="$3"
+  local flag="$4"
+  local value
+
+  if [[ -z "$show_default" ]]; then
+    message+=" ($default_option)"
+  fi
+  message+=': '
+
+  if [[ "$flag" == 'TEST_MODE' ]]; then
+    printf '%s\n' "$message"
+  fi
+
+  read -r -p "$message" response
+  value="$?"
+
+  if [[ "$value" -ne 0 || -z "$response" ]]; then
+    printf '%s\n' "$default_option"
+    return
+  fi
+
+  printf '%s\n' "$response"
 }

@@ -144,6 +144,33 @@ function test_load_module_text()
   load_module_text "$path/file_empty" "1"
   assertEquals 'This file is empty, this should return an error.' "4" "$?"
 
+function test_ask_with_default()
+{
+  local output=''
+  local desired_output=''
+  local assert_equals_message=''
+
+  # Default option showing
+  desired_output=$'Insert something here (lala): \nsomething'
+  assert_equals_message='Default answer and user answer are different.'
+  output=$(printf '%s\n' 'something' | ask_with_default 'Insert something here' 'lala' '' 'TEST_MODE')
+  assert_equals_helper "$assert_equals_message" "$LINENO" "$desired_output" "$output"
+
+  desired_output=$'Insert something here (lala): \nlala'
+  assert_equals_message='User selected default answer.'
+  output=$(printf '%s\n' '' | ask_with_default 'Insert something here' 'lala' '' 'TEST_MODE')
+  assert_equals_helper "$assert_equals_message" "$LINENO" "$desired_output" "$output"
+
+  # With third parameter
+  desired_output=$'Insert something here: \nsomething'
+  assert_equals_message='Not showing default answer, user answered different.'
+  output=$(printf '%s\n' 'something' | ask_with_default 'Insert something here' 'lala' 'false' 'TEST_MODE')
+  assert_equals_helper "$assert_equals_message" "$LINENO" "$desired_output" "$output"
+
+  desired_output=$'Insert something here: \nlala'
+  assert_equals_message='Not showing default answer, user selected it.'
+  output=$(printf '%s\n' '' | ask_with_default 'Insert something here' 'lala' 'false' 'TEST_MODE')
+  assert_equals_helper "$assert_equals_message" "$LINENO" "$desired_output" "$output"
 }
 
 invoke_shunit
