@@ -124,4 +124,28 @@ function test_alert_completion_sound_alert()
   assertEquals 'Variable s should exist.' "$expected" "$output"
 }
 
+function test_ask_with_default()
+{
+  local output=''
+  local assert_equals_message=''
+
+  # Default option showing
+  assert_equals_message='Default answer and user answer are different.'
+  output=$(printf '%s\n' 'something' | ask_with_default 'Test message' 'lala')
+  assert_equals_helper "$assert_equals_message" "$LINENO" 'something' "$output"
+
+  assert_equals_message='User selected default answer.'
+  output=$(printf '%s\n' '' | ask_with_default 'Test message' 'lala')
+  assert_equals_helper "$assert_equals_message" "$LINENO" 'lala' "$output"
+
+  # With third parameter
+  assert_equals_message='Not showing default answer, user answered different.'
+  output=$(printf '%s\n' 'something' | ask_with_default 'Test message' 'lala' false)
+  assert_equals_helper "$assert_equals_message" "$LINENO" 'something' "$output"
+
+  assert_equals_message='Not showing default answer, user selected it.'
+  output=$(printf '%s\n' '' | ask_with_default 'Test message' 'lala' false)
+  assert_equals_helper "$assert_equals_message" "$LINENO" 'lala' "$output"
+}
+
 invoke_shunit
