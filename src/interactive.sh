@@ -39,9 +39,186 @@ function check_ssh_installation()
 
 }
 
+function check_installation()
+{
+  local name="$1"
+  local arch_name="$2"
+  local debian_name="$3"
+  local warning_message
+  local distro
+  local cmd=''
+
+  distro=$(detect_distro '/')
+
+  # Get install command
+  case "$distro" in
+    none)
+      warning_message="We do not support your distro (yet). We cannot check if $name is installed."
+      warning "$warning_message"
+      if [[ $(ask_yN "Do you wish to proceed without configuring $name?") =~ '0' ]]; then
+        exit 0
+      fi
+      ;;
+    arch)
+      pacman -Qe "$arch_name" > /dev/null
+      if [[ "$?" != 0 ]]; then
+        cmd="pacman -S $arch_name"
+      fi
+      ;;
+    debian)
+      installed=$(dpkg-query -W --showformat='${Status}\n' "$debian_name" 2> /dev/null | grep -c 'ok installed')
+      if [[ "$installed" -eq 0 ]]; then
+        cmd="apt install $debian_name"
+      fi
+      ;;
+  esac
+
+  printf '%s\n' "$cmd"
+}
+
+function git_install()
+{
+  local cmd="$1"
+  local has_git
+  
+  has_git=0
+  if [[ -n "$cmd" ]]; then
+    if [[ $(ask_yN 'Git was not found in this system, would you like to install it?' 'y') =~ '1' ]]; then
+      eval "sudo $cmd"
+      has_git="$?"
+    fi
+  fi
+
+  printf '%d\n' "$has_git" 
+}
+
+function get_git_config()
+{
+  local -n git_config="$1"
+  local configured
+  
+  git_config['name']=$(git config user.name)
+  git_config['email']=$(git config user.email)
+  git_config['editor']=$(git config core.editor)
+  git_config['branch']=$(git config init.defaultBranch)
+
+  configured=0
+  if [[ -z "${git_config['name']}" ]]; then
+    configured=1
+  fi
+
+  if [[ -z "${git_config['email']}" ]]; then
+    configured=1
+  fi
+
+  if [[ -z "${git_config['editor']}" ]]; then
+    configured=1
+  fi
+  
+  if [[ -z "${git_config['branch']}" ]]; then
+    configured=1
+  fi
+
+  return "$configured"
+}
+
+function set_config_scope()
+{
+  local config_cmd="$1"
+  local scope
+
+  config_cmd='git config'
+
+  if [[ $(git rev-parse --is-inside-work-tree 2> /dev/null) == 'true' ]]; then
+    printf '%s\n' 'Select the scope of this configuration:'
+
+    select scope in 'Local' 'Global'; do
+      case $scope in
+        'Global')
+          config_cmd+=' --global'
+          break
+          ;;
+        'Local')
+          config_cmd+=' --local'
+          break
+          ;;
+      esac
+    done  
+  else
+    # Git is installed, but PWD is not a Git repository
+    config_cmd+=' --global'
+  fi
+
+  printf '%s\n' "$config_cmd"
+}
+
+function set_git_configuration()
+{
+  local has_git="$1"
+  local configured="$2"
+  local -n git_config="$3"
+  local git_editor_suggestion
+  local config_cmd
+  local scope
+
+  if [[ "$has_git" =~ '0' && "$configured" =~ '1' ]]; then
+    printf '%s\n' 'Now Git will be configured.'
+    config_cmd=$(set_config_scope)
+
+    if [[ -z "${git_config['name']}" ]]; then
+      if [[ $(ask_yN 'Would you like to configure your name on Git?' 'y') =~ '1' ]]; then
+        git_config['name']=$(ask_with_default 'What is your name?' "$USER")
+        eval "$config_cmd user.name ${git_config['name']}"
+      fi
+    fi
+
+    if [[ -z "${git_config['email']}" ]]; then
+      if [[ $(ask_yN 'Would you like to configure your email on Git?' 'y') =~ '1' ]]; then
+        read -r -p 'What is your email? ' git_config['email']
+        # TODO: Validate if it is a valid email
+        eval "$config_cmd user.email ${git_config['email']}"
+      fi
+    fi
+
+    if [[ -z "${git_config['editor']}" ]]; then
+      if [[ $(ask_yN 'Would you like to configure your default editor on Git?' 'y') =~ '1' ]]; then
+
+        # This follows git precedence to determine used editor
+        git_editor_suggestion='vi'
+        [[ -n "$EDITOR" ]] && git_editor_suggestion="$EDITOR"
+        [[ -n "$VISUAL" ]] && git_editor_suggestion="$VISUAL"
+
+        configurations['editor']=$(ask_with_default 'What is your main editor?' "$git_editor_suggestion")
+        eval "$config_cmd core.editor ${git_config['editor']}"
+      fi
+    fi
+
+    if [[ -z "${git_config['branch']}" ]]; then
+      # This is a minor configuration, so default is "no"
+      if [[ $(ask_yN 'Would you like to configure your initial default branch on Git?' 'n') =~ '1' ]]; then
+        git_config['branch']=$(ask_with_default 'What is your default branch name?' 'main')
+        eval "$config_cmd init.defaultBranch ${git_config['branch']}"
+      fi
+    fi
+  fi
+}
+
+function git_setup()
+{
+  local -A configurations
+  local has_git
+  local configured
+  local cmd
+
+  cmd=$(check_installation 'Git' 'git' 'git')
+  has_git=$(git_install "$cmd")
+  get_git_config configurations
+  configured="$?"
+  set_git_configuration "$has_git" "$configured" configurations
+}
+
 function interactive_init()
 {
-
   local cmd=''
   local distro=''
   local has_ssh=0
@@ -49,7 +226,7 @@ function interactive_init()
   local key_name ssh_dir
   local ssh_user ssh_ip
 
-  load_string "$KW_LIB_DIR/strings/init.txt"
+  load_module_text "$KW_LIB_DIR/strings/init.txt"
 
   say "${string_file['text_interactive_start']}"
 
@@ -123,8 +300,9 @@ function interactive_init()
       options_values['REMOTE']="${ssh_user:-root}@${ssh_ip:-127.0.0.1}:22"
     fi
   fi
-  #TODO: Help to setup git;
-
+    
+  git_setup
+  
   #TODO: Help to setup kworkflow.config;
 
   #TODO: Check for required;
