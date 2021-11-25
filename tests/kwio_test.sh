@@ -124,4 +124,26 @@ function test_alert_completion_sound_alert()
   assertEquals 'Variable s should exist.' "$expected" "$output"
 }
 
+function test_load_module_text()
+{
+
+  path="$PWD/tests/samples/load_module_text_test_samples/"
+
+  load_module_text "$path/file_correct" "1"
+  assertEquals 'Should work without any errors.' "0" "$?"
+
+  load_module_text "$path/file_wrong_key" "1"
+  assertEquals 'This file has invalid keys, this should return multiple errors.' "1" "$?"
+
+  load_module_text "$path/file_without_key" "1"
+  assertEquals 'This file has no keys, this should return an error.' "2" "$?"
+
+  load_module_text "$path/file_does_not_exist_(do not create)" "1"
+  assertEquals 'This file does not exist, this should return an error.' "3" "$?"
+
+  load_module_text "$path/file_empty" "1"
+  assertEquals 'This file is empty, this should return an error.' "4" "$?"
+
+}
+
 invoke_shunit

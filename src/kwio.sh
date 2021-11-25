@@ -1,3 +1,5 @@
+# Associative array to read strings from files
+
 # NOTE: src/kw_config_loader.sh must be included before this file
 declare -gr BLUECOLOR='\033[1;34;49m%s\033[m'
 declare -gr REDCOLOR='\033[1;31;49m%s\033[m'
@@ -118,4 +120,82 @@ function ask_yN()
   else
     printf '%s\n' '0'
   fi
+}
+
+# load text used in the module from a file into a dictionary.
+# This function requires a key before a body of text to
+# name that particular body of text, as in this example:
+
+# [KEY]:
+# text
+
+# @path the full path of the text file to be read
+# as the first argument.
+# @reset optional parameter. If not null, will reset the dictionary.
+
+# KEY must be non-empty, alphanumeric and between square brackets followed by a
+# colon. The global array string_file can then be queried by key as in
+# ${string_file[KEY]} to obtain the string. KEY should be named according
+# to its respective module for compatibility. That is, if we have modules A and B,
+# name A's keys as [KEY_A] and B's keys as [KEY_B]. This makes it so the modules
+# keys will be compatible with each other
+
+# Return:
+# 0: In case of success.
+# 1: If an invalid key is found, prints the line with a bad key.
+# 2: If a key is not found.
+# 3: If @path is invalid, or is not a text file.
+# 4: If the file given in @path is empty.
+function load_module_text()
+{
+  local path="$1"
+  local reset="$2"
+  local key=''
+  local line_counter=0
+  local error=0
+  local key_set=0
+
+  if [[ -n "$reset" ]]; then
+    unset module_text_dictionary
+  fi
+
+  declare -gA module_text_dictionary
+
+  if ! [[ -f "$path" ]]; then
+    complain "[ERROR]:$path: Does not exist or is not a text file."
+    return 3
+  fi
+
+  if ! [[ -s "$path" ]]; then
+    complain "[ERROR]:$path: File is empty."
+    return 4
+  fi
+
+  while read -r line; do
+    ((line_counter++))
+    if [[ "$line" =~ ^\[(.*)\]:$ ]]; then
+      key=$(printf '%s' "$line" | grep -o -E '\w+')
+      if [[ -z "$key" ]]; then
+        error=1
+        complain "[ERROR]:$path:$line_counter: keys should be alphanum chars"
+        continue
+      fi
+
+      if [[ -n "${module_text_dictionary[$key]}" ]]; then
+        warning "[WARNING]:$path:$line_counter: overwriting '$key' key."
+      fi
+
+      key_set=1
+      module_text_dictionary["$key"]=''
+    elif [[ -n "$key" ]]; then
+      module_text_dictionary["$key"]+=$'\n'"$line"
+    fi
+  done < "$path"
+
+  if [[ "$key_set" -eq "0" ]]; then
+    error=2
+    complain "[ERROR]:$path: no key found"
+  fi
+
+  return "$error"
 }
