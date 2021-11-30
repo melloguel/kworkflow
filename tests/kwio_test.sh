@@ -10,6 +10,8 @@ include './src/kwlib.sh'
 # the function will return before the background commands finish.
 
 declare -A configurations
+declare -g load_module_text_path="$PWD/tests/samples/load_module_text_test_samples/"
+
 sound_file="$PWD/tests/.kwio_test_aux/sound.file"
 visual_file="$PWD/tests/.kwio_test_aux/visual.file"
 
@@ -124,26 +126,59 @@ function test_alert_completion_sound_alert()
   assertEquals 'Variable s should exist.' "$expected" "$output"
 }
 
-function test_load_module_text()
+function test_load_module_text_good_files()
 {
 
-  path="$PWD/tests/samples/load_module_text_test_samples/"
-
-  load_module_text "$path/file_correct" "1"
+  load_module_text "$load_module_text_path/file_correct" "1" > /dev/null
   assertEquals 'Should work without any errors.' "0" "$?"
 
-  load_module_text "$path/file_wrong_key" "1"
-  assertEquals 'This file has invalid keys, this should return multiple errors.' "1" "$?"
+  assertEquals 'Key1' 'Hello, there! How are you? I hope you are enjoying reading this test suit!' "${module_text_dictionary[key1]}"
+  assertEquals 'Key2' 'Hey, you still there? []' "${module_text_dictionary[key2]}"
+  assertEquals 'Key3' 'This should work with multiple lines.
+Line 1
+Line 2
+Line 3
+Line 4
+Line 5' "${module_text_dictionary[key3]}"
+  assertEquals 'Key4' 'done.' "${module_text_dictionary[key4]}"
+  assertEquals 'Key5' '' "${module_text_dictionary[key5]}"
+  assertEquals 'Key6' '
 
-  load_module_text "$path/file_without_key" "1"
+
+
+
+The one above should have an empty value.
+' "${module_text_dictionary[key6]}"
+  assertEquals 'Key7' '
+This value should be ok
+' "${module_text_dictionary[key7]}"
+}
+
+function test_load_module_text_bad_keys()
+{
+  # Test invalid keys and gets the right kinds of exceptions
+  exp="[ERROR]:$load_module_text_path/file_wrong_key:7: keys should be alphanum chars
+[ERROR]:$load_module_text_path/file_wrong_key:10: keys should be alphanum chars
+[ERROR]:$load_module_text_path/file_wrong_key:13: keys should be alphanum chars
+[ERROR]:$load_module_text_path/file_wrong_key:16: keys should be alphanum chars
+[ERROR]:$load_module_text_path/file_wrong_key:19: keys should be alphanum chars"
+  out=$(load_module_text "$load_module_text_path/file_wrong_key" "1")
+  assertEquals 'This file has invalid keys, this should return multiple errors.' "1" "$?"
+  assertEquals 'The ERROR message is not consistent with the error code or is incomplete.' "$exp" "$out"
+}
+
+function test_load_module_text_bad_files()
+{
+  # Merge the next 2 and call them invalid file
+  load_module_text "$load_module_text_path/file_without_key" "1" > /dev/null
   assertEquals 'This file has no keys, this should return an error.' "2" "$?"
 
-  load_module_text "$path/file_does_not_exist_(do not create)" "1"
-  assertEquals 'This file does not exist, this should return an error.' "3" "$?"
-
-  load_module_text "$path/file_empty" "1"
+  load_module_text "$load_module_text_path/file_empty" "1" > /dev/null
   assertEquals 'This file is empty, this should return an error.' "4" "$?"
 
+  # Test file does not exist exception
+  load_module_text "$load_module_text_path/file_does_not_exist_(do not create)" "1" > /dev/null
+  assertEquals 'This file does not exist, this should return an error.' "3" "$?"
 }
 
 invoke_shunit

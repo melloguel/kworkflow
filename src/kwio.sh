@@ -154,6 +154,7 @@ function load_module_text()
   local line_counter=0
   local error=0
   local key_set=0
+  local first_line=0
 
   if [[ -n "$reset" ]]; then
     unset module_text_dictionary
@@ -174,7 +175,12 @@ function load_module_text()
   while read -r line; do
     ((line_counter++))
     if [[ "$line" =~ ^\[(.*)\]:$ ]]; then
-      key=$(printf '%s' "$line" | grep -o -E '\w+')
+      key=''
+      #echo before "${BASH_REMATCH[1]}"
+      [[ "${BASH_REMATCH[1]}" =~ (^[A-Za-z0-9_][A-Za-z0-9_]*$) ]] && key="${BASH_REMATCH[1]}"
+      #echo after "${BASH_REMATCH[1]}"
+      #echo "${BASH_REMATCH[1]}"
+      #key="${BASH_REMATCH[0]}" #$(printf '%s' "$line" | grep -o -E '\w+')
       if [[ -z "$key" ]]; then
         error=1
         complain "[ERROR]:$path:$line_counter: keys should be alphanum chars"
@@ -186,9 +192,15 @@ function load_module_text()
       fi
 
       key_set=1
+      first_line=1
       module_text_dictionary["$key"]=''
     elif [[ -n "$key" ]]; then
-      module_text_dictionary["$key"]+=$'\n'"$line"
+      if [[ "$first_line" -eq 1 ]]; then
+        module_text_dictionary["$key"]="$line"
+        first_line=0
+      else
+        module_text_dictionary["$key"]+=$'\n'"$line"
+      fi
     fi
   done < "$path"
 
